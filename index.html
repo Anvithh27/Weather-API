@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>🌤 Weather Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Roboto', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #74ebd5, #ACB6E5);
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .container {
+      background: white;
+      padding: 2rem;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      text-align: center;
+      width: 90%;
+      max-width: 420px;
+      position: relative;
+    }
+
+    h1 {
+      margin-bottom: 1rem;
+      color: #333;
+    }
+
+    input {
+      width: 70%;
+      padding: 0.7rem;
+      margin-right: 0.5rem;
+      font-size: 1rem;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      padding: 0.7rem 1rem;
+      font-size: 1rem;
+      border: none;
+      background-color: #007BFF;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    .weather-info {
+      margin-top: 2rem;
+      background: #f5f5f5;
+      border-radius: 12px;
+      padding: 1rem;
+      transition: all 0.3s ease;
+    }
+
+    .weather-info h2 {
+      margin: 0 0 1rem 0;
+      font-size: 1.5rem;
+    }
+
+    .weather-info p {
+      margin: 0.3rem 0;
+    }
+
+    .weather-icon {
+      width: 80px;
+      height: 80px;
+    }
+
+    .error {
+      color: red;
+      margin-top: 1rem;
+    }
+
+    .loading {
+      margin-top: 1rem;
+      font-style: italic;
+      color: #444;
+    }
+
+    .metrics-link {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      font-size: 0.85rem;
+      color: #007BFF;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    .metrics-link:hover {
+      color: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🌤 Weather App</h1>
+    <input type="text" id="cityInput" placeholder="Enter city name" />
+    <button onclick="getWeather()">Check</button>
+
+    <div class="loading" id="loading"></div>
+    <div id="weather" class="weather-info"></div>
+    <div id="error" class="error"></div>
+
+    <div class="metrics-link" onclick="window.open('/metrics', '_blank')">View Metrics</div>
+  </div>
+
+  <script>
+    async function getWeather() {
+      const city = document.getElementById('cityInput').value || 'Hyderabad';
+      const weatherDiv = document.getElementById('weather');
+      const errorDiv = document.getElementById('error');
+      const loadingDiv = document.getElementById('loading');
+
+      weatherDiv.innerHTML = '';
+      errorDiv.innerHTML = '';
+      loadingDiv.innerHTML = 'Loading weather data...';
+
+      try {
+        const res = await fetch(`/weather?city=${city}`);
+        if (!res.ok) throw new Error('API call failed');
+
+        const data = await res.json();
+        const iconCode = data.weather[0].icon;
+        const iconUrl = `https://openweathermap.org/img/wn/${iconCode}@2x.png`;
+
+        weatherDiv.innerHTML = `
+          <h2>${data.name}, ${data.sys.country}</h2>
+          <img src="${iconUrl}" class="weather-icon" alt="Weather Icon">
+          <p><strong>🌡 Temperature:</strong> ${data.main.temp}°C</p>
+          <p><strong>💧 Humidity:</strong> ${data.main.humidity}%</p>
+          <p><strong>🌥 Condition:</strong> ${data.weather[0].description}</p>
+        `;
+        loadingDiv.innerHTML = '';
+      } catch (err) {
+        errorDiv.innerHTML = '❌ Could not load weather data.';
+        loadingDiv.innerHTML = '';
+      }
+    }
+  </script>
+</body>
+</html>
+
