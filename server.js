@@ -2,6 +2,9 @@ const express = require('express');
 const axios = require('axios');
 const client = require('prom-client');
 const path = require('path');
+const os= require('os');
+
+
 
 const app = express();
 const port = 4000;
@@ -77,6 +80,28 @@ const errorTypeCounter = new client.Counter({
   name: 'weather_api_error_types',
   help: 'Types of errors encountered in /weather',
   labelNames: ['type']
+});
+const youtubeDuration = new client.Histogram({
+  name: 'youtube_link_duration_seconds',
+  help: 'Time taken to load YouTube link',
+  buckets: [0.1, 0.3, 0.5, 1, 2, 3, 5]
+});
+
+client.register.registerMetric(youtubeDuration);
+
+
+app.get('/youtube', async (req, res) => {
+  const end = youtubeDuration.startTimer();
+  const link = 'https://youtu.be/krUdJ87uxXc?si=k4nTvQ8nqou5NN0k';
+
+  try {
+    await axios.get(link);
+    res.sendStatus(200);
+  } catch (err) {
+    res.sendStatus(500);
+  } finally {
+    end();
+  }
 });
 
 // ---------- Serve Static HTML ---------- //
