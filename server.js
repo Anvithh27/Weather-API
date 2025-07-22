@@ -142,35 +142,6 @@ app.get('/metrics', async (req, res) => {
   res.set('Content-Type', client.register.contentType);
   res.end(await client.register.metrics());
 });
-// ---------- Extra Fun APIs ---------- //
-app.get('/joke', async (req, res) => {
-  try {
-    const response = await axios.get('https://icanhazdadjoke.com/', {
-      headers: { Accept: 'application/json' }
-    });
-    res.json({ joke: response.data.joke });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch joke' });
-  }
-});
-
-app.get('/cat-fact', async (req, res) => {
-  try {
-    const response = await axios.get('https://catfact.ninja/fact');
-    res.json({ fact: response.data.fact });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch cat fact' });
-  }
-});
-
-app.get('/activity', async (req, res) => {
-  try {
-    const response = await axios.get('https://www.boredapi.com/api/activity');
-    res.json({ activity: response.data.activity });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch activity' });
-  }
-});
 
 // ---------- Start Server ---------- //
 app.listen(port, () => {
