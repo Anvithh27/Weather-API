@@ -20,33 +20,30 @@ jobs:
           username: ec2-user
           key: ${{ secrets.EC2_KEY }}
           script: |
-            cd /home/ec2-user/Weather-API || exit
+  cd /home/ec2-user/Weather-API || exit
 
-            # Fix Git ownership issue
-            git config --global --add safe.directory /home/ec2-user/Weather-API
+  # Fix ownership
+  sudo chown -R ec2-user:ec2-user /home/ec2-user/Weather-API
 
-            # Pull latest changes
-            git reset --hard
-            git pull origin main
+  # Fix Git safe directory
+  git config --global --add safe.directory /home/ec2-user/Weather-API
 
-            # Install Node.js if missing
-            if ! command -v node &> /dev/null; then
-              curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
-              sudo yum install -y nodejs
-            fi
+  # Pull latest changes
+  git reset --hard
+  git pull origin main
 
-            # Install PM2 if not installed
-            if ! command -v pm2 &> /dev/null; then
-              sudo npm install -g pm2
-            fi
+  # Install Node.js if missing
+  if ! command -v node &> /dev/null; then
+    curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
+    sudo yum install -y nodejs
+  fi
 
-            # Install project dependencies
-            npm install
+  # Install dependencies
+  npm install
 
-            # Start or restart server with PM2
-            pm2 start server.js --name weather-api || pm2 restart weather-api
+  # Kill existing server if running on same port
+  fuser -k 4000/tcp || true
 
-            # Save PM2 process list for auto-start on reboot
-            pm2 save
-            pm2 startup systemd -u ec2-user --hp /home/ec2-user
+  # Start server in background using nohup
+  nohup node server.js > server.log 2>&1 &
 
