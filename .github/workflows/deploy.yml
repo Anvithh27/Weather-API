@@ -20,37 +20,33 @@ jobs:
           username: ec2-user
           key: ${{ secrets.EC2_KEY }}
           script: |
-            # Go to project directory
             cd /home/ec2-user/Weather-API || exit
 
-            # Fix Git dubious ownership
+            # Fix Git ownership issue
             git config --global --add safe.directory /home/ec2-user/Weather-API
 
             # Pull latest changes
             git reset --hard
             git pull origin main
 
-            # Install Node.js if not installed
+            # Install Node.js if missing
             if ! command -v node &> /dev/null; then
-              echo "Node.js not found. Installing..."
               curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
               sudo yum install -y nodejs
             fi
 
-            # Install npm dependencies
+            # Install PM2 if not installed
+            if ! command -v pm2 &> /dev/null; then
+              sudo npm install -g pm2
+            fi
+
+            # Install project dependencies
             npm install
 
-            # Build the app
-            npm run build
+            # Start or restart server with PM2
+            pm2 start server.js --name weather-api || pm2 restart weather-api
 
-            # Ensure Apache web root exists
-            sudo mkdir -p /var/www/html
-
-            # Copy build files to Apache web root
-            sudo rm -rf /var/www/html/*
-            sudo cp -r dist/* /var/www/html/
-
-            # Enable and restart Apache
-            sudo systemctl enable httpd
-            sudo systemctl restart httpd
+            # Save PM2 process list for auto-start on reboot
+            pm2 save
+            pm2 startup systemd -u ec2-user --hp /home/ec2-user
 
