@@ -1,0 +1,56 @@
+name: Deploy Weather API to EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_KEY }}
+          script: |
+            # Go to project directory
+            cd /home/ec2-user/Weather-API || exit
+
+            # Fix Git dubious ownership
+            git config --global --add safe.directory /home/ec2-user/Weather-API
+
+            # Pull latest changes
+            git reset --hard
+            git pull origin main
+
+            # Install Node.js if not installed
+            if ! command -v node &> /dev/null; then
+              echo "Node.js not found. Installing..."
+              curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
+              sudo yum install -y nodejs
+            fi
+
+            # Install npm dependencies
+            npm install
+
+            # Build the app
+            npm run build
+
+            # Ensure Apache web root exists
+            sudo mkdir -p /var/www/html
+
+            # Copy build files to Apache web root
+            sudo rm -rf /var/www/html/*
+            sudo cp -r dist/* /var/www/html/
+
+            # Enable and restart Apache
+            sudo systemctl enable httpd
+            sudo systemctl restart httpd
+
