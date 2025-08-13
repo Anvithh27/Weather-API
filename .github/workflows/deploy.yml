@@ -1,4 +1,4 @@
-name: Deploy Weather API to EC2
+name: Deploy Weather API to EC2 using nohup
 
 on:
   push:
@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout Code
         uses: actions/checkout@v3
 
       - name: Deploy to EC2
@@ -20,30 +20,33 @@ jobs:
           username: ec2-user
           key: ${{ secrets.EC2_KEY }}
           script: |
-  cd /home/ec2-user/Weather-API || exit
+            # Navigate to project directory
+            cd /home/ec2-user/Weather-API || exit
 
-  # Fix ownership
-  sudo chown -R ec2-user:ec2-user /home/ec2-user/Weather-API
+            # Fix ownership and Git safe directory
+            sudo chown -R ec2-user:ec2-user /home/ec2-user/Weather-API
+            git config --global --add safe.directory /home/ec2-user/Weather-API
 
-  # Fix Git safe directory
-  git config --global --add safe.directory /home/ec2-user/Weather-API
+            # Pull latest changes
+            git reset --hard
+            git pull origin main
 
-  # Pull latest changes
-  git reset --hard
-  git pull origin main
+            # Install Node.js if missing
+            if ! command -v node &> /dev/null; then
+              echo "Node.js not found. Installing..."
+              curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
+              sudo yum install -y nodejs
+            fi
 
-  # Install Node.js if missing
-  if ! command -v node &> /dev/null; then
-    curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
-    sudo yum install -y nodejs
-  fi
+            # Install npm dependencies
+            npm install
 
-  # Install dependencies
-  npm install
+            # Kill any existing server running on the port (e.g., 4000)
+            fuser -k 4000/tcp || true
 
-  # Kill existing server if running on same port
-  fuser -k 4000/tcp || true
+            # Start the server in background using nohup
+            nohup node server.js > server.log 2>&1 &
 
-  # Start server in background using nohup
-  nohup node server.js > server.log 2>&1 &
+            # Show running Node processes for verification
+            ps -ef | grep node
 
