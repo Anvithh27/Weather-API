@@ -1,4 +1,4 @@
-name: Deploy Weather API to EC2 using nohup
+name: Deploy Weather API to EC2 with PM2
 
 on:
   push:
@@ -33,20 +33,25 @@ jobs:
 
             # Install Node.js if missing
             if ! command -v node &> /dev/null; then
-              echo "Node.js not found. Installing..."
               curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
               sudo yum install -y nodejs
             fi
 
-            # Install npm dependencies
+            # Install PM2 if missing
+            if ! command -v pm2 &> /dev/null; then
+              sudo npm install -g pm2
+            fi
+
+            # Install project dependencies
             npm install
 
-            # Kill any existing server running on the port (e.g., 4000)
-            fuser -k 4000/tcp || true
+            # Start or restart server with PM2
+            pm2 start server.js --name weather-api || pm2 restart weather-api
 
-            # Start the server in background using nohup
-            nohup node server.js > server.log 2>&1 &
+            # Save PM2 process list for auto-start on reboot
+            pm2 save
+            sudo env PATH=$PATH:/usr/bin pm2 startup systemd -u ec2-user --hp /home/ec2-user
 
             # Show running Node processes for verification
-            ps -ef | grep node
+            pm2 list
 
