@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>🌤 Weather Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/weather-icons/2.0.10/css/weather-icons.min.css" integrity="sha512-wN4n6o0SZ1YQ0YDhjlDcuG/j0R+Xg0+q0WENJKfRbXk+dhtB4Z3bZZdLkqG+e6dqhhTKIzDtpJvLUNXEB3vH5g==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -13,24 +14,26 @@
     justify-content: center;
     align-items: center;
     min-height: 100vh;
-    transition: background 0.5s ease;
+    transition: background 0.8s ease;
     background: linear-gradient(135deg, #74ebd5, #ACB6E5);
   }
+
   .container {
     background: rgba(255,255,255,0.95);
-    border-radius: 20px;
-    padding: 2rem 1.5rem;
-    max-width: 450px;
-    width: 90%;
+    border-radius: 25px;
+    padding: 2rem;
+    max-width: 480px;
+    width: 95%;
     text-align: center;
-    box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.25);
     position: relative;
   }
-  h1 { color: #333; margin-bottom: 1.2rem; }
+
+  h1 { color: #333; margin-bottom: 1.5rem; font-size: 2rem; }
   input {
     width: 65%;
     padding: 0.7rem;
-    border-radius: 10px;
+    border-radius: 12px;
     border: 1px solid #ccc;
     font-size: 1rem;
     outline: none;
@@ -40,30 +43,38 @@
   button {
     padding: 0.7rem 1rem;
     border: none;
-    border-radius: 10px;
+    border-radius: 12px;
     background-color: #007BFF;
     color: white;
     cursor: pointer;
     transition: all 0.3s ease;
   }
   button:hover { background-color: #0056b3; transform: scale(1.05); }
+
   .weather-info {
     margin-top: 2rem;
     background: #f7f7f7;
-    border-radius: 15px;
-    padding: 1.5rem;
+    border-radius: 20px;
+    padding: 1.8rem;
     box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
-    transition: all 0.3s ease;
+    transition: all 0.5s ease;
   }
-  .weather-info h2 { font-size: 1.6rem; margin-bottom: 0.8rem; }
-  .weather-info p { margin: 0.5rem 0; font-size: 1rem; }
-  .weather-icon { width: 100px; height: 100px; margin-bottom: 1rem; }
+  .weather-info h2 { font-size: 1.7rem; margin-bottom: 0.8rem; }
+  .weather-info p { margin: 0.5rem 0; font-size: 1.1rem; }
+
+  .weather-icon {
+    font-size: 80px;
+    margin-bottom: 1rem;
+    transition: transform 0.5s ease;
+  }
+
   .error { color: red; margin-top: 1rem; font-weight: bold; }
   .loading { margin-top: 1rem; font-style: italic; color: #444; }
+
   .metrics-link {
     position: absolute;
-    bottom: 10px;
-    right: 10px;
+    bottom: 12px;
+    right: 12px;
     font-size: 0.85rem;
     color: #007BFF;
     cursor: pointer;
@@ -71,11 +82,18 @@
   }
   .metrics-link:hover { color: #0056b3; }
 
-  /* Dynamic backgrounds for weather */
+  /* Dynamic weather backgrounds */
   body.sunny { background: linear-gradient(to right, #f6d365, #fda085); }
   body.rainy { background: linear-gradient(to right, #00c6fb, #005bea); }
   body.cloudy { background: linear-gradient(to right, #bdc3c7, #2c3e50); }
   body.snowy { background: linear-gradient(to right, #e0eafc, #cfdef3); }
+
+  /* Responsive */
+  @media(max-width: 500px){
+    h1 { font-size: 1.7rem; }
+    .weather-info { padding: 1.2rem; }
+    .weather-icon { font-size: 60px; }
+  }
 </style>
 </head>
 <body>
@@ -92,6 +110,24 @@
 </div>
 
 <script>
+const weatherIcons = {
+  "clear": "wi-day-sunny",
+  "clouds": "wi-day-cloudy",
+  "rain": "wi-rain",
+  "drizzle": "wi-sprinkle",
+  "thunderstorm": "wi-thunderstorm",
+  "snow": "wi-snow",
+  "mist": "wi-fog",
+  "smoke": "wi-smoke",
+  "haze": "wi-day-haze",
+  "dust": "wi-dust",
+  "fog": "wi-fog",
+  "sand": "wi-sandstorm",
+  "ash": "wi-volcano",
+  "squall": "wi-strong-wind",
+  "tornado": "wi-tornado"
+};
+
 async function getWeather() {
   const city = document.getElementById('cityInput').value || 'Hyderabad';
   const weatherDiv = document.getElementById('weather');
@@ -106,8 +142,8 @@ async function getWeather() {
     const res = await fetch(`/weather?city=${city}`);
     if (!res.ok) throw new Error('API call failed');
     const data = await res.json();
-    
-    // Dynamic body background
+
+    // Set dynamic background
     const condition = data.weather[0].main.toLowerCase();
     document.body.className = '';
     if (condition.includes('clear')) document.body.classList.add('sunny');
@@ -115,12 +151,12 @@ async function getWeather() {
     else if (condition.includes('cloud')) document.body.classList.add('cloudy');
     else if (condition.includes('snow')) document.body.classList.add('snowy');
 
-    const iconCode = data.weather[0].icon;
-    const iconUrl = `https://openweathermap.org/img/wn/${iconCode}@2x.png`;
+    // Get weather icon class
+    const iconClass = weatherIcons[condition] || "wi-day-sunny";
 
     weatherDiv.innerHTML = `
       <h2>${data.name}, ${data.sys.country}</h2>
-      <img src="${iconUrl}" class="weather-icon" alt="Weather Icon">
+      <i class="weather-icon wi ${iconClass}"></i>
       <p>🌡 Temperature: ${data.main.temp}°C</p>
       <p>💧 Humidity: ${data.main.humidity}%</p>
       <p>🌥 Condition: ${data.weather[0].description}</p>
