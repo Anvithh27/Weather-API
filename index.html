@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🌤 Weather Dashboard</title>
+<title>🌤 Advanced Weather Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/weather-icons/2.0.10/css/weather-icons.min.css" integrity="sha512-wN4n6o0SZ1YQ0YDhjlDcuG/j0R+Xg0+q0WENJKfRbXk+dhtB4Z3bZZdLkqG+e6dqhhTKIzDtpJvLUNXEB3vH5g==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 <style>
@@ -19,9 +19,10 @@
   }
 
   .container {
-    max-width: 900px;
+    max-width: 1000px;
     width: 95%;
     text-align: center;
+    padding: 2rem;
   }
 
   h1 { font-size: 2.5rem; margin-bottom: 1.5rem; color: #333; }
@@ -30,6 +31,8 @@
     display: flex;
     justify-content: center;
     margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 10px;
   }
 
   .search-bar input {
@@ -43,7 +46,6 @@
   }
   .search-bar input:focus { border-color: #007BFF; }
   .search-bar button {
-    margin-left: 10px;
     padding: 0.8rem 1.5rem;
     font-size: 1rem;
     border-radius: 50px;
@@ -55,11 +57,26 @@
   }
   .search-bar button:hover { background: #0056b3; transform: scale(1.05); }
 
-  /* Weather Cards Grid */
+  /* Temperature toggle */
+  .toggle-container {
+    margin-top: 1rem;
+  }
+  .toggle-container button {
+    margin: 0 5px;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    background: #f0f0f0;
+    transition: all 0.3s ease;
+  }
+  .toggle-container button.active { background: #007BFF; color: white; }
+
   .weather-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 1.5rem;
+    margin-top: 2rem;
   }
 
   .weather-card {
@@ -70,19 +87,19 @@
     transition: transform 0.3s ease, box-shadow 0.3s ease;
   }
   .weather-card:hover { transform: translateY(-5px); box-shadow: 0 15px 35px rgba(0,0,0,0.25); }
-
   .weather-card h2 { font-size: 1.3rem; margin-bottom: 0.8rem; }
   .weather-icon { font-size: 60px; margin-bottom: 1rem; transition: transform 0.5s ease; }
   .weather-card p { margin: 0.3rem 0; font-size: 1rem; }
 
-  /* Dynamic body backgrounds */
+  .loading { font-style: italic; color: #444; margin: 1rem 0; }
+  .error { color: red; margin: 1rem 0; font-weight: bold; }
+
+  /* Dynamic background */
   body.sunny { background: linear-gradient(to top, #fddb92, #d1fdff); }
   body.rainy { background: linear-gradient(to top, #00c6fb, #005bea); }
   body.cloudy { background: linear-gradient(to top, #bdc3c7, #2c3e50); }
   body.snowy { background: linear-gradient(to top, #e0eafc, #cfdef3); }
-
-  .loading { font-style: italic; color: #444; margin: 1rem 0; }
-  .error { color: red; margin: 1rem 0; font-weight: bold; }
+  body.night { background: linear-gradient(to top, #2c3e50, #000000); }
 
   @media(max-width: 500px){
     h1 { font-size: 2rem; }
@@ -93,10 +110,16 @@
 </head>
 <body>
 <div class="container">
-  <h1>🌤 Modern Weather Dashboard</h1>
+  <h1>🌤 Advanced Weather Dashboard</h1>
+
   <div class="search-bar">
     <input type="text" id="cityInput" placeholder="Enter city name">
     <button onclick="getWeather()">Search</button>
+  </div>
+
+  <div class="toggle-container">
+    <button id="celsiusBtn" class="active" onclick="setUnit('metric')">°C</button>
+    <button id="fahrenheitBtn" onclick="setUnit('imperial')">°F</button>
   </div>
 
   <div class="loading" id="loading"></div>
@@ -105,6 +128,8 @@
 </div>
 
 <script>
+let unit = 'metric'; // default °C
+
 const weatherIcons = {
   "clear": "wi-day-sunny",
   "clouds": "wi-day-cloudy",
@@ -123,8 +148,17 @@ const weatherIcons = {
   "tornado": "wi-tornado"
 };
 
-async function getWeather() {
-  const city = document.getElementById('cityInput').value || 'Hyderabad';
+const API_KEY = 'YOUR_OPENWEATHERMAP_API_KEY';
+
+function setUnit(newUnit) {
+  unit = newUnit;
+  document.getElementById('celsiusBtn').classList.toggle('active', unit==='metric');
+  document.getElementById('fahrenheitBtn').classList.toggle('active', unit==='imperial');
+  getWeather();
+}
+
+async function getWeather(city) {
+  const cityName = city || document.getElementById('cityInput').value;
   const weatherGrid = document.getElementById('weather');
   const loadingDiv = document.getElementById('loading');
   const errorDiv = document.getElementById('error');
@@ -134,7 +168,15 @@ async function getWeather() {
   loadingDiv.innerHTML = 'Loading weather data...';
 
   try {
-    const res = await fetch(`/weather?city=${city}`);
+    let cityQuery = cityName ? `q=${cityName}` : '';
+    if(!cityQuery) { // auto geolocation
+      const pos = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject);
+      });
+      cityQuery = `lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`;
+    }
+
+    const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?${cityQuery}&units=${unit}&appid=${API_KEY}`);
     if (!res.ok) throw new Error('API call failed');
     const data = await res.json();
 
@@ -146,21 +188,48 @@ async function getWeather() {
     else if (condition.includes('cloud')) document.body.classList.add('cloudy');
     else if (condition.includes('snow')) document.body.classList.add('snowy');
 
-    // Today Card
+    // Current Weather Card
     const todayCard = document.createElement('div');
     todayCard.className = 'weather-card';
     const iconClass = weatherIcons[condition] || "wi-day-sunny";
+    const sunrise = new Date(data.sys.sunrise * 1000).toLocaleTimeString();
+    const sunset = new Date(data.sys.sunset * 1000).toLocaleTimeString();
     todayCard.innerHTML = `
       <h2>${data.name}, ${data.sys.country}</h2>
       <i class="weather-icon wi ${iconClass}"></i>
-      <p>🌡 ${data.main.temp}°C</p>
-      <p>💧 ${data.main.humidity}% Humidity</p>
-      <p>🌥 ${data.weather[0].description}</p>
-      <p>💨 Wind: ${data.wind.speed} m/s</p>
+      <p>🌡 Temp: ${data.main.temp}°${unit==='metric'?'C':'F'}</p>
+      <p>💧 Humidity: ${data.main.humidity}%</p>
+      <p>🌥 Condition: ${data.weather[0].description}</p>
+      <p>💨 Wind: ${data.wind.speed} ${unit==='metric'?'m/s':'mph'}</p>
+      <p>📈 Pressure: ${data.main.pressure} hPa</p>
+      <p>🌅 Sunrise: ${sunrise} | 🌇 Sunset: ${sunset}</p>
     `;
     weatherGrid.appendChild(todayCard);
 
-    // Optionally, you can loop for 5-day forecast if API supports it
+    // 5-Day Forecast
+    const forecastRes = await fetch(`https://api.openweathermap.org/data/2.5/forecast?${cityQuery}&units=${unit}&appid=${API_KEY}`);
+    const forecastData = await forecastRes.json();
+
+    // Only take one forecast per day (every 24h)
+    const dailyForecast = {};
+    forecastData.list.forEach(f => {
+      const date = f.dt_txt.split(' ')[0];
+      if(!dailyForecast[date]) dailyForecast[date] = f;
+    });
+
+    Object.values(dailyForecast).forEach(f => {
+      const card = document.createElement('div');
+      card.className = 'weather-card';
+      const icon = weatherIcons[f.weather[0].main.toLowerCase()] || "wi-day-sunny";
+      card.innerHTML = `
+        <h2>${new Date(f.dt_txt).toLocaleDateString()}</h2>
+        <i class="weather-icon wi ${icon}"></i>
+        <p>Temp: ${f.main.temp}°${unit==='metric'?'C':'F'}</p>
+        <p>Humidity: ${f.main.humidity}%</p>
+        <p>${f.weather[0].description}</p>
+      `;
+      weatherGrid.appendChild(card);
+    });
 
     loadingDiv.innerHTML = '';
   } catch (err) {
@@ -169,6 +238,9 @@ async function getWeather() {
     document.body.className = '';
   }
 }
+
+// Auto detect city on load
+window.addEventListener('load', () => getWeather());
 </script>
 </body>
 </html>
